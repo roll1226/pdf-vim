@@ -48,6 +48,7 @@ let hintTyped = "";
 let searchActive = false;
 let searchPages = []; // page numbers with matches (1-based)
 let searchIdx = 0;
+let currentSearchTerm = "";
 
 // ── Load PDF from ?url=... ────────────────────────────────────────────────────
 async function init() {
@@ -135,6 +136,86 @@ async function renderPage(idx) {
 
   await page.render({ canvasContext: canvas.getContext("2d"), viewport })
     .promise;
+
+  await buildTextLayer(entry, page, viewport);
+}
+
+// ── Text layer & search highlighting ──────────────────────────────────────────
+async function buildTextLayer(entry, page, viewport) {
+  const textContent = await page.getTextContent();
+
+  const div = document.createElement("div");
+  div.className = "textLayer";
+  div.style.width = `${entry.canvas.width}px`;
+  div.style.height = `${entry.canvas.height}px`;
+  entry.wrapper.appendChild(div);
+  entry.textLayer = div;
+  entry.textItems = [];
+
+  for (const item of textContent.items) {
+    if (!item.str) continue;
+
+    const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+    const [a, b, , , e, f] = tx;
+    const fontSize = Math.sqrt(a * a + b * b);
+    if (fontSize < 1) continue;
+
+    const span = document.createElement("span");
+    span.textContent = item.str;
+    span.style.left = `${e}px`;
+    span.style.top = `${f - fontSize}px`;
+    span.style.fontSize = `${fontSize}px`;
+    span.style.lineHeight = `${fontSize}px`;
+
+    div.appendChild(span);
+    entry.textItems.push({ span, str: item.str });
+  }
+
+  if (currentSearchTerm) {
+    applyHighlightsToEntry(entry);
+  }
+}
+
+function applyHighlightsToEntry(entry) {
+  if (!entry.textItems || !currentSearchTerm) return;
+  const term = currentSearchTerm.toLowerCase();
+
+  for (const item of entry.textItems) {
+    const lowerStr = item.str.toLowerCase();
+    if (!lowerStr.includes(term)) {
+      item.span.textContent = item.str;
+      continue;
+    }
+
+    let html = "";
+    let lastIdx = 0;
+    let idx;
+    const text = item.str;
+
+    while ((idx = lowerStr.indexOf(term, lastIdx)) !== -1) {
+      html += escapeHtml(text.slice(lastIdx, idx));
+      html += `<mark class="search-highlight">${escapeHtml(text.slice(idx, idx + term.length))}</mark>`;
+      lastIdx = idx + term.length;
+    }
+    html += escapeHtml(text.slice(lastIdx));
+    item.span.innerHTML = html;
+  }
+}
+
+function clearHighlights() {
+  for (const entry of pageEntries) {
+    if (!entry.textItems) continue;
+    for (const item of entry.textItems) {
+      item.span.textContent = item.str;
+    }
+  }
+}
+
+function escapeHtml(str) {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 // ── Scroll utilities ──────────────────────────────────────────────────────────
@@ -341,37 +422,59 @@ function enterSearchMode() {
 function exitSearchMode() {
   searchActive = false;
   searchBar.classList.add("hidden");
-  showStatus("");
   container.focus();
+  // ステータスはクリアしない（検索結果を表示し続ける）
 }
 
 async function performSearch(text) {
   if (!text || !pdfDoc) return;
 
+  clearHighlights();
+  currentSearchTerm = text;
   searchPages = [];
-  searchResEl.textContent = "検索中...";
+  let totalMatches = 0;
+  const term = text.toLowerCase();
+
+  showStatus("検索中...");
 
   for (let i = 1; i <= pdfDoc.numPages; i++) {
     const page = await pdfDoc.getPage(i);
     const content = await page.getTextContent();
-    const pageText = content.items.map((it) => it.str).join("");
-    if (pageText.toLowerCase().includes(text.toLowerCase())) {
+    const pageText = content.items.map((it) => it.str).join("").toLowerCase();
+
+    let count = 0;
+    let pos = 0;
+    while ((pos = pageText.indexOf(term, pos)) !== -1) {
+      count++;
+      pos += term.length;
+    }
+
+    if (count > 0) {
       searchPages.push(i);
+      totalMatches += count;
     }
   }
 
-  if (searchPages.length === 0) {
-    searchResEl.textContent = "見つかりません";
+  // Apply highlights to already-rendered pages
+  for (const entry of pageEntries) {
+    if (entry.rendered && entry.textItems) {
+      applyHighlightsToEntry(entry);
+    }
+  }
+
+  if (totalMatches === 0) {
+    currentSearchTerm = "";
+    showStatus(`「${text}」は見つかりませんでした`);
     return;
   }
 
   searchIdx = 0;
   scrollToPage(searchPages[0]);
-  updateSearchStatus();
+  showStatus(`「${text}」: ${totalMatches}件ヒット (n/N で移動)`);
 }
 
 function updateSearchStatus() {
-  searchResEl.textContent = `${searchIdx + 1} / ${searchPages.length}`;
+  showStatus(`「${currentSearchTerm}」: ${searchIdx + 1} / ${searchPages.length} ページ (n/N で移動)`);
 }
 
 function searchNext() {
@@ -509,7 +612,14 @@ document.addEventListener(
         break;
       case "Escape":
         exitHintMode();
-        exitSearchMode();
+        if (searchActive) {
+          exitSearchMode();
+        } else if (currentSearchTerm) {
+          clearHighlights();
+          currentSearchTerm = "";
+          searchPages = [];
+          showStatus("");
+        }
         break;
     }
   },
