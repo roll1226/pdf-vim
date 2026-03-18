@@ -232,6 +232,8 @@ const scrollRight = () => scrollBy(SCROLL_STEP, 0);
 const scrollLeft = () => scrollBy(-SCROLL_STEP, 0);
 const scrollTop = () => scrollTo(0, 0);
 const scrollBottom = () => scrollTo(0, container.scrollHeight);
+const scrollPageDown = () => scrollBy(0, container.clientHeight);
+const scrollPageUp = () => scrollBy(0, -container.clientHeight);
 
 // ── Current page indicator ────────────────────────────────────────────────────
 container.addEventListener("scroll", updatePageIndicator, { passive: true });
@@ -539,6 +541,18 @@ document.addEventListener(
     if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
 
     const key = e.key;
+
+    // ── Ctrl+f / Ctrl+b: page scroll ──
+    if (e.ctrlKey && key === "f") {
+      e.preventDefault();
+      scrollPageDown();
+      return;
+    }
+    if (e.ctrlKey && key === "b") {
+      e.preventDefault();
+      scrollPageUp();
+      return;
+    }
 
     // ── "gg" double-g sequence ──
     if (key === "g") {
