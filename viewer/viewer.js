@@ -134,7 +134,7 @@ async function renderPage(idx) {
   entry.wrapper.appendChild(canvas);
   entry.canvas = canvas;
 
-  await page.render({ canvasContext: canvas.getContext("2d"), viewport })
+  await page.render({ canvasContext: canvas.getContext("2d", { willReadFrequently: true }), viewport })
     .promise;
 
   await buildTextLayer(entry, page, viewport);
