@@ -22,8 +22,8 @@ import {
   scrollHalfDown,
   scrollHalfUp,
   scrollLeft,
-  scrollPageDown,
-  scrollPageUp,
+  scrollNextPage,
+  scrollPrevPage,
   scrollRight,
   scrollTop,
   scrollUp,
@@ -66,12 +66,12 @@ document.addEventListener(
 
     if (e.ctrlKey && key === "f") {
       e.preventDefault();
-      scrollPageDown();
+      scrollNextPage();
       return;
     }
     if (e.ctrlKey && key === "b") {
       e.preventDefault();
-      scrollPageUp();
+      scrollPrevPage();
       return;
     }
 

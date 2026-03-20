@@ -21,3 +21,22 @@ export const scrollPageUp = () => scrollBy(0, -container.clientHeight);
 export function scrollToPage(pageNum) {
   state.pageEntries[pageNum - 1]?.wrapper.scrollIntoView({ block: "start" });
 }
+
+function currentPageIndex() {
+  const { pageEntries } = state;
+  const mid = container.scrollTop + container.clientHeight / 2;
+  for (let i = pageEntries.length - 1; i >= 0; i--) {
+    if (pageEntries[i].wrapper.offsetTop <= mid) return i;
+  }
+  return 0;
+}
+
+export function scrollNextPage() {
+  const next = currentPageIndex() + 1;
+  if (next < state.pageEntries.length) scrollToPage(next + 1);
+}
+
+export function scrollPrevPage() {
+  const prev = currentPageIndex() - 1;
+  scrollToPage(Math.max(prev + 1, 1));
+}
