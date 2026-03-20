@@ -1,0 +1,5 @@
+# PDF.js ライブラリ（setup.sh でダウンロード / GitHub Actions で自動取得）
+lib/
+
+# macOS
+.DS_Store
