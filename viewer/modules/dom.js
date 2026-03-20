@@ -1,0 +1,12 @@
+export const container = document.getElementById("viewer-container");
+export const pagesEl = document.getElementById("pages-container");
+export const loadingEl = document.getElementById("loading");
+export const errorEl = document.getElementById("error");
+export const hintOverlay = document.getElementById("hint-overlay");
+export const searchBar = document.getElementById("search-bar");
+export const searchInput = document.getElementById("search-input");
+export const searchResEl = document.getElementById("search-results");
+export const statusBar = document.getElementById("status-bar");
+export const currentPageEl = document.getElementById("current-page");
+export const totalPagesEl = document.getElementById("total-pages");
+export const filenameEl = document.getElementById("filename");
