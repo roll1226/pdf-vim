@@ -12,10 +12,16 @@ jobs:
     runs-on: ubuntu-latest
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Get version from manifest.json
+        id: get_version
+        run: echo "version=$(jq -r .version manifest.json)" >> $GITHUB_OUTPUT
 
       - name: Download PDF.js via setup.sh
         run: bash setup.sh
@@ -34,3 +40,25 @@ jobs:
           name: pdf-vim
           path: pdf-vim.zip
           retention-days: 30
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: pdf-vim
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: PDF Vim v${{ needs.build.outputs.version }}
+          files: pdf-vim.zip
+          make_latest: true
+          generate_release_notes: true
