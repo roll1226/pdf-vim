@@ -29,9 +29,9 @@ export function updatePageIndicator() {
   const mid = container.scrollTop + container.clientHeight / 2;
   for (let i = pageEntries.length - 1; i >= 0; i--) {
     if (pageEntries[i].wrapper.offsetTop <= mid) {
-      currentPageEl.textContent = i + 1;
+      currentPageEl.value = i + 1;
       return;
     }
   }
-  currentPageEl.textContent = 1;
+  currentPageEl.value = 1;
 }

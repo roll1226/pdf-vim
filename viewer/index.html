@@ -8,10 +8,35 @@
   </head>
   <body>
     <div id="toolbar">
-      <span id="filename"></span>
-      <span id="page-info">
-        Page <span id="current-page">-</span> / <span id="total-pages">-</span>
-      </span>
+      <div class="toolbar-left">
+        <button id="sidebar-toggle" title="サイドバー (S)">&#9776;</button>
+        <span id="filename"></span>
+      </div>
+      <div class="toolbar-center">
+        <button id="btn-prev-page" title="前のページ (k)">&#9664;</button>
+        <div class="page-nav">
+          <input id="page-input" type="number" min="1" value="1" title="ページ番号を入力" />
+          <span class="page-sep">/</span>
+          <span id="total-pages">-</span>
+        </div>
+        <button id="btn-next-page" title="次のページ (j)">&#9654;</button>
+        <div class="toolbar-divider"></div>
+        <button id="btn-zoom-out" title="縮小 (-)">&#8722;</button>
+        <input id="zoom-input" type="text" value="150%" title="ズーム倍率" />
+        <button id="btn-zoom-in" title="拡大 (+)">+</button>
+        <button id="btn-fit-width" title="幅に合わせる">&#8596;</button>
+        <button id="btn-fit-page" title="ページに合わせる">&#9723;</button>
+      </div>
+      <div class="toolbar-right">
+        <button id="btn-print" title="印刷">&#128438;</button>
+        <button id="btn-download" title="ダウンロード">&#8659;</button>
+        <span id="current-page" class="hidden"></span>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div id="sidebar-header">Pages</div>
+      <div id="thumbnail-container"></div>
     </div>
 
     <div id="viewer-container" tabindex="0">

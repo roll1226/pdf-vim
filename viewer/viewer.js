@@ -6,7 +6,8 @@ import {
   totalPagesEl,
 } from "./modules/dom.js";
 import {
-  enterHintMode,
+  enterLinkHintMode,
+  enterTextHintMode,
   exitHintMode,
   handleHintKey,
   isHintActive,
@@ -26,6 +27,7 @@ import {
   scrollPrevPage,
   scrollRight,
   scrollTop,
+  scrollToPage,
   scrollUp,
 } from "./modules/scroll.js";
 import {
@@ -37,8 +39,23 @@ import {
   searchNext,
   searchPrev,
 } from "./modules/search.js";
+import {
+  buildThumbnails,
+  initSidebar,
+  isSidebarOpen,
+  toggleSidebar,
+  updateActiveThumb,
+} from "./modules/sidebar.js";
 import { state } from "./modules/state.js";
 import { showError, showStatus, updatePageIndicator } from "./modules/ui.js";
+import {
+  fitPage,
+  fitWidth,
+  initZoomControls,
+  updateZoomInput,
+  zoomIn,
+  zoomOut,
+} from "./modules/zoom.js";
 
 // ── キーシーケンスバッファ ("gg" 用) ─────────────────────────────────────────
 let keyBuffer = "";
@@ -46,13 +63,68 @@ let keyBufferTimer = null;
 
 // ── 初期化 ────────────────────────────────────────────────────────────────────
 initSearchInput();
-container.addEventListener("scroll", updatePageIndicator, { passive: true });
+initSidebar();
+initZoomControls();
+
+// ページ入力フィールド
+const pageInputEl = document.getElementById("page-input");
+pageInputEl?.addEventListener("change", () => {
+  const n = parseInt(pageInputEl.value, 10);
+  if (n >= 1 && n <= state.pdfDoc?.numPages) {
+    scrollToPage(n);
+  } else {
+    updatePageIndicator();
+  }
+});
+pageInputEl?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") pageInputEl.blur();
+  else if (e.key === "Escape") {
+    updatePageIndicator();
+    pageInputEl.blur();
+  }
+  e.stopPropagation();
+});
+
+// 前後ページボタン
+document.getElementById("btn-prev-page")?.addEventListener("click", scrollPrevPage);
+document.getElementById("btn-next-page")?.addEventListener("click", scrollNextPage);
+
+// 印刷・ダウンロード
+document.getElementById("btn-print")?.addEventListener("click", () => window.print());
+document.getElementById("btn-download")?.addEventListener("click", () => {
+  const params = new URLSearchParams(window.location.search);
+  const url = params.get("url");
+  if (url) {
+    const a = document.createElement("a");
+    a.href = decodeURIComponent(url);
+    a.download = decodeURIComponent(url).split("/").pop().split("?")[0];
+    a.click();
+  }
+});
+
+container.addEventListener(
+  "scroll",
+  () => {
+    updatePageIndicator();
+    if (isSidebarOpen()) {
+      const mid = container.scrollTop + container.clientHeight / 2;
+      const entries = state.pageEntries;
+      for (let i = entries.length - 1; i >= 0; i--) {
+        if (entries[i].wrapper.offsetTop <= mid) {
+          updateActiveThumb(i + 1);
+          break;
+        }
+      }
+    }
+  },
+  { passive: true },
+);
 
 // ── キーボードハンドラ ────────────────────────────────────────────────────────
 document.addEventListener(
   "keydown",
   (e) => {
-    if (isSearchActive()) return; // 検索入力は searchInput のリスナーが処理
+    if (isSearchActive()) return;
 
     if (isHintActive()) {
       e.preventDefault();
@@ -93,7 +165,6 @@ document.addEventListener(
       return;
     }
 
-    // g 以外のキーでバッファをリセット
     keyBuffer = "";
     clearTimeout(keyBufferTimer);
 
@@ -128,11 +199,28 @@ document.addEventListener(
         break;
       case "f":
         e.preventDefault();
-        enterHintMode(false);
+        enterTextHintMode();
         break;
       case "F":
         e.preventDefault();
-        enterHintMode(true);
+        enterLinkHintMode(false);
+        break;
+      case "+":
+      case "=":
+        e.preventDefault();
+        zoomIn();
+        break;
+      case "-":
+        e.preventDefault();
+        zoomOut();
+        break;
+      case "W":
+        e.preventDefault();
+        fitWidth();
+        break;
+      case "P":
+        e.preventDefault();
+        fitPage();
         break;
       case "/":
         e.preventDefault();
@@ -145,6 +233,10 @@ document.addEventListener(
       case "N":
         e.preventDefault();
         searchPrev();
+        break;
+      case "s":
+        e.preventDefault();
+        toggleSidebar();
         break;
       case "Escape":
         exitHintMode();
@@ -159,7 +251,7 @@ document.addEventListener(
         break;
     }
   },
-  true, // キャプチャフェーズで処理（PDF プラグインより優先）
+  true,
 );
 
 // ── PDF 読み込み・初期化 ──────────────────────────────────────────────────────
@@ -197,8 +289,11 @@ async function init() {
 
   loadingEl.classList.add("hidden");
   totalPagesEl.textContent = state.pdfDoc.numPages;
+  if (pageInputEl) pageInputEl.max = state.pdfDoc.numPages;
 
+  updateZoomInput();
   await createPlaceholders();
+  buildThumbnails();
   container.focus();
 }
 

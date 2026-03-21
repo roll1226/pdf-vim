@@ -1,7 +1,6 @@
 // pdfjsLib は lib/pdf.min.js により window グローバルとして提供される。
 /* global pdfjsLib */
 
-import { SCALE } from "./constants.js";
 import { container, pagesEl } from "./dom.js";
 import { state } from "./state.js";
 
@@ -11,9 +10,11 @@ export function escapeHtml(str) {
 }
 
 // ── プレースホルダー生成 + 遅延レンダリング ───────────────────────────────────
+let lazyObserver = null;
+
 export async function createPlaceholders() {
   const { pdfDoc, pageEntries } = state;
-  const vp0 = (await pdfDoc.getPage(1)).getViewport({ scale: SCALE });
+  const vp0 = (await pdfDoc.getPage(1)).getViewport({ scale: state.scale });
 
   for (let i = 1; i <= pdfDoc.numPages; i++) {
     const wrapper = document.createElement("div");
@@ -30,7 +31,8 @@ export async function createPlaceholders() {
 }
 
 function setupLazyRender() {
-  const observer = new IntersectionObserver(
+  if (lazyObserver) lazyObserver.disconnect();
+  lazyObserver = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting) return;
@@ -40,7 +42,32 @@ function setupLazyRender() {
     },
     { root: container, rootMargin: "400px" },
   );
-  state.pageEntries.forEach((e) => observer.observe(e.wrapper));
+  state.pageEntries.forEach((e) => lazyObserver.observe(e.wrapper));
+}
+
+// ── ズーム変更時の再レンダリング ──────────────────────────────────────────────
+export async function rerenderAll() {
+  const { pdfDoc, pageEntries } = state;
+  if (!pdfDoc || pageEntries.length === 0) return;
+
+  // 全ページをプレースホルダー状態にリセット
+  const vp0 = (await pdfDoc.getPage(1)).getViewport({ scale: state.scale });
+  for (const entry of pageEntries) {
+    entry.rendered = false;
+    entry.canvas = null;
+    entry.textItems = null;
+    entry.textLayer = null;
+    entry.wrapper.innerHTML = `p. ${entry.pageNum}`;
+    entry.wrapper.classList.add("page-placeholder");
+    entry.wrapper.style.width = `${Math.floor(vp0.width)}px`;
+    entry.wrapper.style.height = `${Math.floor(vp0.height)}px`;
+  }
+
+  if (state.currentSearchTerm) {
+    state.currentSearchTerm = "";
+  }
+
+  setupLazyRender();
 }
 
 async function renderPage(idx) {
@@ -49,7 +76,7 @@ async function renderPage(idx) {
   entry.rendered = true; // 二重レンダリング防止のため先にフラグを立てる
 
   const page = await state.pdfDoc.getPage(entry.pageNum);
-  const viewport = page.getViewport({ scale: SCALE });
+  const viewport = page.getViewport({ scale: state.scale });
 
   const canvas = document.createElement("canvas");
   canvas.width = Math.floor(viewport.width);

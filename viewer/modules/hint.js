@@ -6,7 +6,7 @@ import { showStatus } from "./ui.js";
 
 // ── モジュールローカルなヒントステート ────────────────────────────────────────
 let hintActive = false;
-let hintLinks = []; // { label, x, y, ann, openInNewTab, el }
+let hintLinks = []; // { label, x, y, ann?, target?, openInNewTab?, el }
 let hintTyped = "";
 
 export const isHintActive = () => hintActive;
@@ -21,8 +21,55 @@ function generateLabels(count) {
   });
 }
 
-// ── モード開始 / 終了 ─────────────────────────────────────────────────────────
-export async function enterHintMode(openInNewTab) {
+// ── テキストヒントモード (f キー) ─────────────────────────────────────────────
+export function enterTextHintMode() {
+  hintActive = true;
+  hintLinks = [];
+  hintTyped = "";
+  hintOverlay.innerHTML = "";
+  hintOverlay.classList.add("active");
+
+  const contRect = container.getBoundingClientRect();
+
+  for (const entry of state.pageEntries) {
+    if (!entry.textItems) continue;
+    const pageRect = entry.wrapper.getBoundingClientRect();
+    if (pageRect.bottom < contRect.top || pageRect.top > contRect.bottom) continue;
+
+    for (const { span, str } of entry.textItems) {
+      if (!str.trim()) continue;
+      const rect = span.getBoundingClientRect();
+      if (rect.bottom < contRect.top || rect.top > contRect.bottom) continue;
+      if (rect.right < contRect.left || rect.left > contRect.right) continue;
+      if (rect.width < 2) continue;
+
+      hintLinks.push({
+        label: "",
+        x: rect.left,
+        y: rect.top,
+        target: span,
+        el: null,
+      });
+    }
+  }
+
+  if (hintLinks.length === 0) {
+    exitHintMode();
+    showStatus("テキストが見つかりません", 2000);
+    return;
+  }
+
+  const labels = generateLabels(hintLinks.length);
+  hintLinks.forEach((h, i) => {
+    h.label = labels[i];
+    h.el = createHintEl(h);
+  });
+
+  showStatus(`TEXT  ${hintLinks.length} items -- ラベルを入力`);
+}
+
+// ── リンクヒントモード (F キー) ───────────────────────────────────────────────
+export async function enterLinkHintMode(openInNewTab) {
   hintActive = true;
   hintLinks = [];
   hintTyped = "";
@@ -116,7 +163,11 @@ export function handleHintKey(key) {
   });
 
   if (matching.length === 1 && matching[0].label === hintTyped) {
-    followLink(matching[0]);
+    if (matching[0].ann !== undefined) {
+      followLink(matching[0]);
+    } else {
+      followTextHint(matching[0]);
+    }
     exitHintMode();
   }
 }
@@ -130,6 +181,11 @@ function createHintEl({ label, x, y }) {
   el.style.top = `${y}px`;
   hintOverlay.appendChild(el);
   return el;
+}
+
+// ── テキスト位置へスクロール ──────────────────────────────────────────────────
+function followTextHint({ target }) {
+  target.scrollIntoView({ behavior: "auto", block: "center" });
 }
 
 // ── リンク遷移 ────────────────────────────────────────────────────────────────

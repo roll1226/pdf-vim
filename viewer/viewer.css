@@ -16,35 +16,236 @@ html, body {
 #toolbar {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: 32px;
+  height: 40px;
   background: #1a1a2e;
   color: #a0c4ff;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 14px;
+  padding: 0 10px;
   font-size: 13px;
   z-index: 100;
   border-bottom: 1px solid #333;
+  gap: 8px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  min-width: 0;
+  flex: 1;
+}
+
+.toolbar-center {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Toolbar buttons */
+.toolbar-center button,
+.toolbar-right button,
+#sidebar-toggle {
+  background: none;
+  border: 1px solid transparent;
+  color: #a0c4ff;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 3px 7px;
+  border-radius: 3px;
+  line-height: 1;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.toolbar-center button:hover,
+.toolbar-right button:hover,
+#sidebar-toggle:hover {
+  background: rgba(160, 196, 255, 0.12);
+  border-color: #3a4a6a;
+  color: #fff;
+}
+
+/* Page navigation */
+.page-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #7aa2c8;
+}
+
+#page-input {
+  width: 38px;
+  background: #0d0d1f;
+  border: 1px solid #3a4a6a;
+  border-radius: 3px;
+  color: #fff;
+  font: 12px 'Courier New', monospace;
+  padding: 2px 4px;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+#page-input::-webkit-inner-spin-button,
+#page-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+}
+
+#page-input:focus {
+  border-color: #a0c4ff;
+}
+
+.page-sep {
+  color: #555;
+}
+
+#total-pages {
+  color: #7aa2c8;
+}
+
+/* Zoom input */
+#zoom-input {
+  width: 48px;
+  background: #0d0d1f;
+  border: 1px solid #3a4a6a;
+  border-radius: 3px;
+  color: #fff;
+  font: 12px 'Courier New', monospace;
+  padding: 2px 4px;
+  text-align: center;
+  outline: none;
+}
+
+#zoom-input:focus {
+  border-color: #a0c4ff;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: #3a3a5a;
+  margin: 0 4px;
 }
 
 #filename {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 60%;
-}
-
-#page-info {
-  white-space: nowrap;
   font-size: 12px;
   color: #7aa2c8;
+}
+
+#sidebar-toggle {
+  font-size: 16px;
+  padding: 3px 6px;
+  flex-shrink: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  position: fixed;
+  top: 40px;
+  bottom: 24px;
+  left: 0;
+  width: 180px;
+  background: #202030;
+  border-right: 1px solid #3a3a4a;
+  z-index: 95;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#sidebar.sidebar-hidden {
+  display: none;
+}
+
+#sidebar-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #7aa2c8;
+  border-bottom: 1px solid #3a3a4a;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+#thumbnail-container {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+}
+
+.thumb-item {
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: 2px;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.thumb-item:hover {
+  border-color: #5a7aaa;
+}
+
+.thumb-item.active {
+  border-color: #a0c4ff;
+}
+
+.thumb-item canvas {
+  display: block;
+  max-width: 152px;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+}
+
+.thumb-item .thumb-label {
+  font-size: 10px;
+  color: #7aa2c8;
+}
+
+/* When sidebar open, shift content */
+body.sidebar-open #viewer-container {
+  left: 180px;
+}
+
+body.sidebar-open #hint-overlay {
+  left: 180px;
+}
+
+body.sidebar-open #search-bar {
+  left: 180px;
+}
+
+body.sidebar-open #status-bar {
+  left: 180px;
 }
 
 /* ── Viewer container ── */
 #viewer-container {
   position: fixed;
-  top: 32px;
+  top: 40px;
   bottom: 24px;
   left: 0; right: 0;
   overflow: auto;
@@ -109,7 +310,7 @@ html, body {
 #hint-overlay {
   display: none;
   position: fixed;
-  top: 32px; bottom: 24px;
+  top: 40px; bottom: 24px;
   left: 0; right: 0;
   pointer-events: none;
   z-index: 500;

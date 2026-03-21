@@ -4,4 +4,5 @@ export const state = {
   pdfDoc: null,
   pageEntries: [], // { pageNum, wrapper, canvas, rendered, textLayer, textItems }
   currentSearchTerm: "", // 空文字列 = 検索なし
+  scale: 1.5, // 現在のズーム倍率
 };
